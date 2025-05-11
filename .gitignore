@@ -1,0 +1,29 @@
+# === Node & TypeScript ===
+node_modules/
+.env
+.env.*
+.env.*.local
+npm-debug.log*
+*.tsbuildinfo
+
+# Build outputs
+/dist/
+/build/
+
+# macOS & system files
+.DS_Store
+
+# Supabase local environment
+supabase/.branches/
+supabase/.temp/
+
+# Docker
+*.local
+
+# Cursor & editor settings
+.cursor/
+.vscode/
+.idea/
+
+# Ignore Supabase secrets if accidentally placed
+supabase/.env* 
