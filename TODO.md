@@ -1,6 +1,7 @@
 ## TODO (全工程一覧)
 
 > Supabase Token: `sbp_7dfb1cf0a192385e3a39f0b86f316ddf7eda20d6`
+> Supabase Token: `your_supabase_personal_access_token`
 >
 > ※ 機密情報のため、公開リポジトリへ push しないこと。
 
