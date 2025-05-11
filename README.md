@@ -57,6 +57,11 @@ cp .env.sample .env  # トークンを書き換える
 npx ts-node scripts/fetch_pokemons.ts
 ```
 
+### ローカル開発時の注意点
+- **Docker Desktop の起動**: `supabase start` を実行する前に、Docker Desktop が起動していることを確認してください。
+- **Supabase コンテナ**: `supabase start` 後、コンテナが正常に起動しているか `docker ps` で確認できます。`supabase status` で各サービスの URL やキーも確認してください。
+- **ポート衝突**: もし `supabase start` でポート関連のエラーが出る場合は、`supabase/config.toml` で各サービスのポート番号を変更するか、既存のプロセスを停止してください (例: `supabase stop --project-id <other_project>` )。
+
 ## MCP サーバの設定
 1. **Personal Access Token (PAT)** を [Supabase ダッシュボード](https://app.supabase.com/) で作成。
 2. `.cursor/mcp.json` を作成するか、`.cursor/mcp.json.sample` をコピーし、トークンとプロジェクト ID を記入。
@@ -77,10 +82,31 @@ npx ts-node scripts/fetch_pokemons.ts
         "your_project_ref",
         "--read-only"
       ]
+    },
+    "supabase-local-postgres": { // ローカルDB用 (こちらを主に利用)
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:postgres@127.0.0.1:54322/postgres" // `supabase status` で表示される DB URL
+      ]
     }
   }
 }
 ```
+
+**MCPサーバの起動 (ターミナルで実行):**
+
+ローカルDBに接続する場合 (推奨):
+```bash
+npx -y @modelcontextprotocol/server-postgres postgresql://postgres:postgres@127.0.0.1:54322/postgres
+```
+
+Supabase Platform経由 (PATが必要なクラウド開発向け):
+```bash
+npx -y @supabase/mcp-server-supabase@latest --access-token your_supabase_access_token --project-ref your_project_ref --read-only
+```
+バックグラウンドで起動する場合は末尾に `&` を追加します。
 
 ## 使い方
 1. Cursor を開き、**Agent モード**に切替。
@@ -88,10 +114,13 @@ npx ts-node scripts/fetch_pokemons.ts
 3. MCP が SQL を生成し、Supabase にクエリ → 結果を表示。
 
 ## サンプルクエリ
-| 自然言語 | 生成 SQL (例) |
-|----------|---------------|
-| 「どく/くさタイプのポケモンを教えて」 | `SELECT * FROM pokemons WHERE type_1 = 'くさ' AND type_2 = 'どく';` |
-| 「図鑑番号が 150 以下のエスパータイプを出して」 | `SELECT national_no, name_ja FROM pokemons WHERE national_no <= 150 AND (type_1='エスパー' OR type_2='エスパー');` |
+| 自然言語 | 生成 SQL (例) | 想定される結果/アクション |
+|----------|---------------|----------------------|
+| 「くさタイプのポケモンを一覧して」 | `SELECT * FROM pokemons WHERE type_1 = 'くさ' OR type_2 = 'くさ' ORDER BY national_no;` | フシギダネなど、くさタイプを持つポケモンの一覧 |
+| 「フシギダネの情報を教えて」 | `SELECT * FROM pokemons WHERE name_ja = 'フシギダネ';` | フシギダネの詳細情報 (図鑑番号、タイプなど) |
+| 「図鑑番号が10番のポケモンは何？」 | `SELECT * FROM pokemons WHERE national_no = 10;` | キャタピーの情報 |
+| 「どくタイプで一番強いポケモンは？ (注:強さの定義不可)」 | `SELECT * FROM pokemons WHERE type_1 = 'どく' OR type_2 = 'どく';` | (LLMが解釈し、どくタイプのポケモンをリストアップ。順序は不定) |
+| 「エスパータイプのポケモンを3匹教えて」 | `SELECT * FROM pokemons WHERE type_1 = 'エスパー' OR type_2 = 'エスパー' LIMIT 3;` | エスパータイプのポケモンを3匹表示 |
 
 > **注**: 実際の SQL は LLM によって動的生成されるため多少異なる場合があります。
 

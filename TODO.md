@@ -97,6 +97,25 @@
 
 ---
 
+### 💡 ローカル開発・MCPテスト時のポイント
+- **Docker Desktop の起動**: `supabase start` を実行する前に、Docker Desktop が起動していることを確認してください。
+- **MCPサーバーの起動**: CursorでMCPを利用する前に、ターミナルでローカルDB用のMCPサーバーを起動します。DBのURLは `supabase status` で確認できます。
+  ```bash
+  # 例: npx -y @modelcontextprotocol/server-postgres postgresql://postgres:postgres@127.0.0.1:54322/postgres
+  npx -y @modelcontextprotocol/server-postgres YOUR_LOCAL_DB_URL
+  ```
+- **CursorのMCP設定**: `.cursor/mcp.json` で `supabase-local-postgres` サーバーが正しく設定されているか確認し、CursorのMCP設定で有効化します。必要に応じてCursorを再起動してください。
+- **プロンプトの具体性**: MCP (LLM) が解釈しやすいように、具体的で明確なプロンプトを心がけると、期待するSQLが生成されやすくなります。
+
+### ✅ MCP呼び出しプロンプト例 (Cursor Agentモード)
+- 「`pokemons` テーブルから全てのポケモンを教えて」
+- 「`pokemons` テーブルで `name_ja` が「フシギダネ」のレコードを教えて」
+- 「`pokemons` テーブルで `type_1` が「ほのお」のポケモンを教えて」
+- 「`pokemons` テーブルから `national_no` が7のポケモンは何？」
+- 「`pokemons` テーブルで `type_1` が「どく」かつ `type_2` が「ひこう」のポケモンを教えてください」
+- 「`pokemons` テーブルで `name_ja` に「ドン」が含まれるポケモンは？」
+- 「`pokemons` テーブルのスキーマ情報を教えて」 (テーブル構造の確認)
+
 ### チェックリスト
 - [X] Supabase CLI が動作する
 - [X] pokemons テーブル作成済み
@@ -108,5 +127,6 @@
 
 ### 参考
 - Supabase MCP ドキュメント: https://supabase.com/docs/guides/getting-started/mcp
+- Supabase MCP Server (ローカルPostgres用): https://github.com/model-context-protocol/mcp-server-postgres
 - Supabase GitHub リポジトリ: https://github.com/supabase/supabase
 - ポケモン一覧: https://wiki.xn--rckteqa2e.com/wiki/%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%E4%B8%80%E8%A6%A7

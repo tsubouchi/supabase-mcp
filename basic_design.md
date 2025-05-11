@@ -52,6 +52,16 @@ RLS（Row Level Security）は読取専用で全ユーザに許可。書込は�
 MCP   : SELECT * FROM pokemons WHERE type_1='くさ' AND type_2='どく';
 ```
 
+#### より具体的なプロンプト例
+- **テーブル構造の確認:** 「`pokemons` テーブルのカラム情報を教えて」
+  - `DESCRIBE pokemons;` や `PRAGMA table_info(pokemons);` に類する情報取得クエリを期待 (MCPの対応状況による)
+- **あいまい検索:** 「名前に「リザ」が含まれるポケモンを探して」
+  - `SELECT * FROM pokemons WHERE name_ja LIKE '%リザ%';`
+- **複数条件:** 「みずタイプで、かつ全国図鑑番号が100より小さいポケモンは？」
+  - `SELECT * FROM pokemons WHERE (type_1='みず' OR type_2='みず') AND national_no < 100;`
+- **件数指定:** 「じめんタイプのポケモンを5件だけ教えて」
+  - `SELECT * FROM pokemons WHERE type_1='じめん' OR type_2='じめん' LIMIT 5;`
+
 ### 7. ディレクトリ構成
 ```
 / (プロジェクトルート)
@@ -76,5 +86,15 @@ MCP   : SELECT * FROM pokemons WHERE type_1='くさ' AND type_2='どく';
 - [X] スクリプト実行 `npm run fetch`
 - [X] MCP の設定 (`supabase mcp init` → `supabase mcp dev`)
 - [X] Cursor から自然言語検索をテスト
+
+### 10. ローカル開発環境での注意点
+- **DockerとSupabase CLI**: ローカル開発には Docker Desktop 及び Supabase CLI が必須です。各ツールが正しくインストールされ、PATHが通っていることを確認してください。
+- **ポート競合**: `supabase start` 時にポートが競合するエラーが発生した場合、`supabase/config.toml` 内のポート番号を調整するか、競合する既存のサービスを停止してください。
+- **ローカルMCPサーバー**: Cursor等のMCPクライアントからローカルDBに接続する場合、別途ターミナルで `@modelcontextprotocol/server-postgres` サーバーを起動し、正しいDB接続URLを指定する必要があります。
+  ```bash
+  # DB URLは supabase status で確認
+  npx -y @modelcontextprotocol/server-postgres postgresql://postgres:postgres@YOUR_IP:YOUR_DB_PORT/postgres
+  ```
+- **機密情報**: `.env` ファイルや `TODO.md` に記載した実際のAPIキーやトークンは、Gitリポジトリにコミットしないよう `.gitignore` で適切に管理してください。サンプルファイル (`.env.sample`, `mcp.json.sample`) を活用し、実際の値はローカルでのみ使用します。
 
 以上
