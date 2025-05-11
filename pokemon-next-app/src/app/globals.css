@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* :root のCSS変数定義はTailwindのテーマカラー設定に移行するため削除 */
+/*
+:root {
+  --foreground-rgb: 0, 0, 0; 
+  --background-start-rgb: 255, 255, 255; 
+  --background-end-rgb: 255, 255, 255;   
+}
+*/
+
+body {
+  /* color: theme('colors.foreground'); */ /* 削除 */
+  /* background: theme('colors.background'); */ /* 削除 */
+  /* 基本的なスタイルは layout.tsx の body タグに直接クラスを適用するか、
+     Tailwind の @layer base で設定することを推奨 */
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

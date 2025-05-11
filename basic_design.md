@@ -1,7 +1,7 @@
 ## 基本設計書
 
 ### 1. 目的
-ローカル環境で Supabase を用いて Postgres データベースを構築し、ポケモン図鑑（全国図鑑番号 0001〜0200）のデータ（名前・タイプ1・タイプ2）を保存する。さらに Supabase MCP を導入し、Cursor 上で自然言語からポケモンを検索できる仕組みを提供する。
+ローカル環境で Supabase を用いて Postgres データベースを構築し、ポケモン図鑑（全国図鑑番号 0001〜0400）のデータ（名前・タイプ1・タイプ2）を保存する。さらに Supabase MCP を導入し、Cursor 上で自然言語からポケモンを検索できる仕組みを提供する。
 
 ### 2. システム構成図
 ```
@@ -37,9 +37,14 @@
 RLS（Row Level Security）は読取専用で全ユーザに許可。書込はサービスロールのみ許可。
 
 ### 5. データ取得フロー
-1. `scripts/fetch_pokemons.ts` で Wiki ( https://wiki.xn--rckteqa2e.com/... ) を GET。
-2. `cheerio` で表をパースし、1〜200 行目を抽出。名前・タイプ1・タイプ2 を整形。
-3. Supabase Service Key を用いて `pokemons` テーブルへ `upsert`。
+1. `scripts/fetch_pokemons.ts` が指定された範囲のポケモンデータをポケモン Wiki ( https://wiki.xn--rckteqa2e.com/... ) から取得する。
+   - 初期状態では、まず全国図鑑番号 0001〜0200 の200体を対象とする。
+   - スクリプトは改修され、0201〜0400 の範囲のポケモンも追加取得できるように拡張されている。
+   - `main` 関数内で取得範囲 (`startNo`, `endNo`) と取得件数 (`limit`) を指定して `fetchDataForRange` 関数を呼び出すことで、段階的なデータ取得が可能。
+2. `cheerio` を使用してHTMLテーブルをパースし、指定範囲内のポケモンの名前・タイプ1・タイプ2を抽出・整形する。
+   - `parsePokemons` 関数内で、指定された図鑑番号範囲のデータを処理し、重複を避けるロジックも含む。
+3. Supabase Service Key を用いて、取得したユニークなポケモンデータを `pokemons` テーブルへ `upsert` する。
+   - `onConflict: 'national_no'` と `ignoreDuplicates: true` オプションにより、図鑑番号の重複があってもエラーとせず、データの整合性を保つ。
 
 ### 6. MCP ワークフロー
 1. Cursor から自然言語クエリを入力。
@@ -96,5 +101,9 @@ MCP   : SELECT * FROM pokemons WHERE type_1='くさ' AND type_2='どく';
   npx -y @modelcontextprotocol/server-postgres postgresql://postgres:postgres@YOUR_IP:YOUR_DB_PORT/postgres
   ```
 - **機密情報**: `.env` ファイルや `TODO.md` に記載した実際のAPIキーやトークンは、Gitリポジトリにコミットしないよう `.gitignore` で適切に管理してください。サンプルファイル (`.env.sample`, `mcp.json.sample`) を活用し、実際の値はローカルでのみ使用します。
+
+### 11. 変更履歴
+- 2025-05-12: `scripts/fetch_pokemons.ts` を改修。取得対象のポケモンを全国図鑑番号0201〜0400の範囲で追加取得可能にした。これにより、DBには最大400体のポケモンデータが格納される。データ取得関数を汎用化し、範囲指定でデータを取得できるようにした。
+- (これより前の変更履歴は省略)
 
 以上
