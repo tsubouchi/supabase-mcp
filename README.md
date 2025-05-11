@@ -1,6 +1,6 @@
 # Pokemon MCP サンプルプロジェクト
 
-このリポジトリは **Supabase** と **Model Context Protocol (MCP)** を活用し、ローカル環境でポケモン図鑑（全国図鑑番号 0001〜0200）のデータベースを構築し、Cursor IDE などの MCP 対応クライアントから自然言語でポケモンを検索できるデモアプリです。
+このリポジトリは **Supabase** と **Model Context Protocol (MCP)** を活用し、ローカル環境でポケモン図鑑（全国図鑑番号 0001〜0400）のデータベースを構築し、Cursor IDE などの MCP 対応クライアントから自然言語でポケモンを検索できるデモアプリです。
 
 ---
 
@@ -18,14 +18,17 @@
 
 ## 概要
 - Supabase CLI を使ってローカルに Postgres + 各種サービスを起動します。
-- スクレイピングスクリプト (`scripts/fetch_pokemons.ts`) がポケモン Wiki からデータを取得し、`pokemons` テーブルに 200 件の行を保存します。
+- スクレイピングスクリプト (`scripts/fetch_pokemons.ts`) がポケモン Wiki からデータを取得し、`pokemons` テーブルに現在 400 件の行を保存します。(初期 1-200、追加 201-400)
 - `public.pokemons` テーブルは RLS で **read-only** 公開設定。
-- MCP サーバ (`@supabase/mcp-server-supabase`) を起動し、Cursor IDE などから自然言語→SQL 変換を行います。
+- MCP サーバ (`@modelcontextprotocol/server-postgres` または `@supabase/mcp-server-supabase`) を起動し、Cursor IDE などから自然言語→SQL 変換を行います。
+
+### データ収集と正確性について
+本プロジェクトでは、ポケモンデータをポケモンWikiから自動収集しています。データ収集スクリプト (`scripts/fetch_pokemons.ts`) は、特に複数のフォルムが存在し、フォルムによってタイプが異なるポケモン（例：メガリザードンXは「ほのお・ドラゴン」タイプ）について、その代表的な情報がデータベースに正しく反映されるように調整されています。初期の実装では一部のフォルムのタイプ情報が正確に取得できない課題がありましたが、パーサーロジックを改善し、より正確なデータが格納されるようになっています。このデータ精度向上のためのデバッグプロセスと具体的な修正内容については、`DEBUG_TODO.md` に詳細が記録されています。
 
 ## 主な機能
 | # | 機能 | 説明 |
 |---|------|------|
-| 1 | ポケモンデータ取得 | 0001〜0200 番のポケモンを自動取得し DB に保存 |
+| 1 | ポケモンデータ取得 | 0001〜0400 番のポケモンを自動取得し DB に保存 |
 | 2 | REST / RPC / GraphQL | Supabase 標準 API でデータ参照可能 |
 | 3 | RLS | 全ユーザ読み取り可・書込み不可 |
 | 4 | MCP 連携 | 自然言語クエリを SQL に変換し、DB を検索 |
@@ -54,6 +57,8 @@ supabase db reset --no-seed
 cp .env.sample .env  # トークンを書き換える
 
 # 7. ポケモンデータ投入
+# 初期データ(1-200)と追加データ(201-400)をまとめて取得・登録するようになっています。
+# スクリプト内の main 関数で取得範囲を調整可能です。
 npx ts-node scripts/fetch_pokemons.ts
 ```
 
@@ -63,7 +68,7 @@ npx ts-node scripts/fetch_pokemons.ts
 - **ポート衝突**: もし `supabase start` でポート関連のエラーが出る場合は、`supabase/config.toml` で各サービスのポート番号を変更するか、既存のプロセスを停止してください (例: `supabase stop --project-id <other_project>` )。
 
 ## MCP サーバの設定
-1. **Personal Access Token (PAT)** を [Supabase ダッシュボード](https://app.supabase.com/) で作成。
+1. **Personal Access Token (PAT)** を [Supabase ダッシュボード](https://app.supabase.com/) で作成。(Supabase Platform経由の `@supabase/mcp-server-supabase` を利用する場合のみ。ローカルDB用の `@modelcontextprotocol/server-postgres` では不要です。)
 2. `.cursor/mcp.json` を作成するか、`.cursor/mcp.json.sample` をコピーし、トークンとプロジェクト ID を記入。
 3. Cursor 設定で MCP を有効化すると、ツール欄に Supabase が表示されます。
 
@@ -118,6 +123,7 @@ npx -y @supabase/mcp-server-supabase@latest --access-token your_supabase_access_
 |----------|---------------|----------------------|
 | 「くさタイプのポケモンを一覧して」 | `SELECT * FROM pokemons WHERE type_1 = 'くさ' OR type_2 = 'くさ' ORDER BY national_no;` | フシギダネなど、くさタイプを持つポケモンの一覧 |
 | 「フシギダネの情報を教えて」 | `SELECT * FROM pokemons WHERE name_ja = 'フシギダネ';` | フシギダネの詳細情報 (図鑑番号、タイプなど) |
+| 「ほのおタイプで、かつドラゴンタイプのポケモンはいる？」 | `SELECT * FROM pokemons WHERE (type_1 = 'ほのお' AND type_2 = 'ドラゴン') OR (type_1 = 'ドラゴン' AND type_2 = 'ほのお');` | リザードン（メガリザードンXのタイプを反映）が表示される |
 | 「図鑑番号が10番のポケモンは何？」 | `SELECT * FROM pokemons WHERE national_no = 10;` | キャタピーの情報 |
 | 「どくタイプで一番強いポケモンは？ (注:強さの定義不可)」 | `SELECT * FROM pokemons WHERE type_1 = 'どく' OR type_2 = 'どく';` | (LLMが解釈し、どくタイプのポケモンをリストアップ。順序は不定) |
 | 「エスパータイプのポケモンを3匹教えて」 | `SELECT * FROM pokemons WHERE type_1 = 'エスパー' OR type_2 = 'エスパー' LIMIT 3;` | エスパータイプのポケモンを3匹表示 |
